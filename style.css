@@ -1,0 +1,369 @@
+/* Camera Dino Controller Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    color: #333;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+header {
+    text-align: center;
+    color: white;
+    margin-bottom: 24px;
+}
+
+header h1 {
+    font-size: 2.2em;
+    margin-bottom: 6px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+header p {
+    font-size: 1.1em;
+    opacity: 0.9;
+}
+
+/* ── Top row: camera + game side by side ── */
+.top-row {
+    display: grid;
+    grid-template-columns: 2fr 3fr;
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+.video-section,
+.game-section {
+    background: white;
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+}
+
+.video-section h3,
+.game-section h3 {
+    color: #667eea;
+    font-size: 1.1em;
+    margin-bottom: 12px;
+    border-bottom: 2px solid #667eea;
+    padding-bottom: 5px;
+}
+
+.video-container {
+    position: relative;
+    width: 100%;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #000;
+    flex: 1;
+}
+
+#webcam {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transform: scaleX(-1);
+}
+
+#pose-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    transform: scaleX(-1);
+    pointer-events: none;
+}
+
+.actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 12px;
+}
+
+#dino-iframe {
+    border: 2px solid #535353;
+    border-radius: 8px;
+    background: #f7f7f7;
+    display: block;
+    width: 100%;
+    flex: 1;
+    min-height: 180px;
+}
+
+.game-hint {
+    margin-top: 10px;
+    color: #888;
+    font-size: 0.85em;
+    text-align: center;
+}
+
+/* ── Bottom row: status / settings / debug ── */
+.bottom-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+.bottom-row > div {
+    background: white;
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.bottom-row h3 {
+    color: #667eea;
+    font-size: 1.1em;
+    margin-bottom: 12px;
+    border-bottom: 2px solid #667eea;
+    padding-bottom: 5px;
+}
+
+.status-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.status-item {
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    font-weight: 500;
+    border-left: 4px solid #667eea;
+    transition: all 0.3s ease;
+}
+
+.status-item.calibrating {
+    border-left-color: #ffc107;
+    background: #fff3cd;
+}
+
+.status-item.ready {
+    border-left-color: #28a745;
+    background: #d4edda;
+}
+
+.status-item.jumping {
+    border-left-color: #dc3545;
+    background: #f8d7da;
+    animation: pulse 0.5s ease-in-out;
+}
+
+.settings-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.setting-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.setting-item label {
+    flex: 1;
+    font-weight: 500;
+    font-size: 0.9em;
+}
+
+.setting-item input[type="range"] {
+    flex: 2;
+    height: 6px;
+    background: #ddd;
+    border-radius: 3px;
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.setting-item input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    background: #667eea;
+    cursor: pointer;
+    border-radius: 50%;
+}
+
+.setting-item input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    background: #667eea;
+    cursor: pointer;
+    border-radius: 50%;
+    border: none;
+}
+
+.setting-item span {
+    min-width: 50px;
+    text-align: right;
+    font-weight: 600;
+    color: #667eea;
+    font-size: 0.9em;
+}
+
+.debug-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+#debug-canvas {
+    width: 100%;
+    height: 80px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background: #f8f9fa;
+}
+
+.debug-info {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    font-size: 0.8em;
+}
+
+.debug-info div {
+    padding: 6px;
+    background: #f8f9fa;
+    border-radius: 5px;
+    text-align: center;
+}
+
+/* ── Buttons ── */
+button {
+    padding: 10px 20px;
+    font-size: 0.9em;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+#start-btn {
+    background: #28a745;
+    color: white;
+}
+
+#start-btn:hover:not(:disabled) {
+    background: #218838;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+}
+
+#calibrate-btn {
+    background: #ffc107;
+    color: #333;
+}
+
+#calibrate-btn:hover:not(:disabled) {
+    background: #e0a800;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(255, 193, 7, 0.3);
+}
+
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+#start-game-btn {
+    background: #667eea;
+    color: white;
+}
+
+#start-game-btn:hover:not(:disabled) {
+    background: #5a6fd6;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+}
+
+/* ── Footer ── */
+footer {
+    background: white;
+    border-radius: 15px;
+    padding: 20px 25px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.instructions h3 {
+    color: #667eea;
+    margin-bottom: 12px;
+    font-size: 1.1em;
+}
+
+.instructions ol {
+    margin-left: 20px;
+    line-height: 1.8;
+}
+
+.instructions li {
+    margin-bottom: 4px;
+}
+
+.instructions strong {
+    color: #667eea;
+    font-weight: 600;
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+    .top-row {
+        grid-template-columns: 1fr;
+    }
+
+    .bottom-row {
+        grid-template-columns: 1fr;
+    }
+
+    .container {
+        padding: 10px;
+    }
+
+    header h1 {
+        font-size: 1.8em;
+    }
+
+    .debug-info {
+        grid-template-columns: 1fr;
+    }
+
+    .actions {
+        flex-direction: column;
+    }
+
+    button {
+        width: 100%;
+    }
+}
+
+/* ── Animation ── */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
