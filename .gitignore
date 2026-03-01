@@ -12,5 +12,9 @@ desktop.ini
 # Logs
 *.log
 
+# Node
+node_modules/
+server/node_modules/
+
 # Legacy (not used)
 dino-game.js
