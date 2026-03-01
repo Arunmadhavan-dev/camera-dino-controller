@@ -246,6 +246,142 @@ html, body {
     font-size: 0.85rem;
 }
 
+/* ── Mode Selection ── */
+.mode-buttons {
+    display: flex;
+    gap: 14px;
+}
+
+.btn-mode {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 28px 16px;
+    background: var(--surface);
+    border: 2px solid var(--glass-border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.btn-mode:hover {
+    border-color: var(--accent);
+    background: rgba(124,92,252,0.08);
+    box-shadow: 0 0 24px var(--accent-glow);
+    transform: translateY(-3px);
+}
+
+.mode-icon {
+    font-size: 2.2rem;
+}
+
+.mode-label {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.mode-desc {
+    font-size: 0.78rem;
+    color: var(--text-dim);
+}
+
+.back-btn {
+    align-self: flex-start;
+    margin-bottom: -8px;
+}
+
+/* ═══════════ SINGLE PLAYER SCREEN ═══════════ */
+#screen-single {
+    height: 100vh;
+    max-height: 100vh;
+    padding: 10px;
+    overflow: hidden;
+    justify-content: flex-start;
+}
+
+#screen-single.active {
+    justify-content: flex-start;
+}
+
+.single-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    max-width: 800px;
+    height: calc(100vh - 20px);
+    margin: 0 auto;
+}
+
+.single-game-section {
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius);
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.single-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.single-header .arena-score {
+    margin-left: auto;
+}
+
+.single-cam-section {
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius);
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+    overflow: hidden;
+}
+
+.single-cam-wrap {
+    position: relative;
+    width: 100%;
+    flex: 1;
+    min-height: 180px;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: #000;
+}
+
+.single-cam-wrap video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1);
+}
+
+.single-cam-wrap canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    transform: scaleX(-1);
+    pointer-events: none;
+}
+
+.single-cam-controls {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
 /* ═══════════ LOBBY SCREEN ═══════════ */
 #screen-lobby {
     background: var(--bg);

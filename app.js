@@ -19,20 +19,42 @@
     // ── DOM refs ──
     const $ = id => document.getElementById(id);
 
+    let singlePose = null; // separate pose controller for single player
+    let singlePlaying = false;
+
     const screens = {
         landing: $('screen-landing'),
+        single: $('screen-single'),
         lobby: $('screen-lobby'),
         countdown: $('screen-countdown'),
         game: $('screen-game'),
         results: $('screen-results')
     };
 
-    // Landing
+    // Landing - mode selection
+    const modeSelect = $('mode-select');
+    const multiForm = $('multi-form');
+    const btnModeSingle = $('btn-mode-single');
+    const btnModeMulti = $('btn-mode-multi');
+    const btnBackMode = $('btn-back-mode');
+
+    // Landing - multiplayer form
     const playerNameInput = $('player-name');
     const btnCreate = $('btn-create');
     const btnJoin = $('btn-join');
     const joinCodeInput = $('join-code');
     const landingError = $('landing-error');
+
+    // Single player
+    const singleScore = $('single-score');
+    const btnSingleBack = $('btn-single-back');
+    const btnSingleStartCam = $('btn-single-start-cam');
+    const btnSingleRecalibrate = $('btn-single-recalibrate');
+    const singleCamStatus = $('single-cam-status');
+    const singleCalProgress = $('single-cal-progress');
+    const singleCalFill = $('single-cal-fill');
+    const singleCalText = $('single-cal-text');
+    const singleCamHint = $('single-cam-hint');
 
     // Lobby
     const lobbyCode = $('lobby-code');
@@ -382,34 +404,6 @@
         }
     }
 
-    // ── Listen for postMessage from T-Rex game iframes ──
-    window.addEventListener('message', (event) => {
-        const data = event.data;
-        if (!data || !data.type) return;
-
-        // Determine which iframe sent the message
-        const youIframe = $('dino-iframe-you');
-        const isMyGame = event.source === (youIframe && youIframe.contentWindow);
-
-        if (isMyGame && data.type === 'score-update') {
-            myScore = data.score;
-            arenaYouScore.textContent = data.score;
-            if (isGamePlaying) {
-                socket.emit('score-update', { score: data.score });
-            }
-        }
-
-        if (isMyGame && data.type === 'game-over') {
-            myScore = data.score;
-            arenaYouScore.textContent = data.score;
-            arenaYouBadge.textContent = 'Crashed';
-            arenaYouBadge.classList.add('crashed');
-            if (isGamePlaying) {
-                socket.emit('player-died', { score: data.score });
-            }
-        }
-    });
-
     // ── Start Game ──
     function startGame() {
         showScreen('game');
@@ -542,6 +536,9 @@
         playerId = null;
         opponentName = '';
         cameraReady = !!pose && pose.isCalibrated;
+        // Reset landing to mode selection
+        modeSelect.style.display = 'block';
+        multiForm.style.display = 'none';
         showScreen('landing');
     }
 
@@ -557,7 +554,192 @@
         }
     }
 
-    // ── Event Listeners ──
+    // ══════════════ SINGLE PLAYER LOGIC ══════════════
+
+    // ── Single Player: Start Camera ──
+    async function initSingleCamera() {
+        if (singlePose && singlePose.running) return;
+
+        const videoEl = $('single-webcam');
+        const canvasEl = $('single-pose-canvas');
+
+        btnSingleStartCam.disabled = true;
+        btnSingleStartCam.textContent = 'Starting...';
+        singleCamStatus.textContent = 'Requesting camera...';
+        singleCamHint.textContent = 'Requesting camera access...';
+
+        singlePose = new PoseController({
+            jumpThreshold: parseInt(sensitivitySlider.value),
+            jumpCooldown: parseInt(cooldownSlider.value),
+            onJump: () => {
+                // Send Space key into single player iframe
+                sendKeyToIframe('dino-iframe-single', 'keydown', 32);
+                setTimeout(() => sendKeyToIframe('dino-iframe-single', 'keyup', 32), 100);
+                singleCamStatus.textContent = 'JUMP!';
+                singleCamStatus.style.color = 'var(--accent)';
+                setTimeout(() => {
+                    singleCamStatus.textContent = 'Ready';
+                    singleCamStatus.style.color = '';
+                }, 300);
+            },
+            onStatus: (msg) => {
+                singleCamStatus.textContent = msg;
+            },
+            onCalibrated: () => {
+                singleCamStatus.textContent = 'Calibrated ✓';
+                singleCalProgress.style.display = 'none';
+                btnSingleRecalibrate.style.display = 'inline-flex';
+                singleCamHint.textContent = 'Calibrated! Jump to play the Dino game!';
+                singleCamHint.classList.add('success');
+                singlePlaying = true;
+
+                // Auto-start the game
+                reloadIframe('dino-iframe-single');
+                setTimeout(() => {
+                    sendKeyToIframe('dino-iframe-single', 'keydown', 32);
+                    setTimeout(() => sendKeyToIframe('dino-iframe-single', 'keyup', 32), 100);
+                }, 800);
+            },
+            onError: (msg) => {
+                singleCamStatus.textContent = 'Error';
+                singleCamHint.textContent = msg;
+                singleCalProgress.style.display = 'none';
+                btnSingleRecalibrate.style.display = 'inline-flex';
+                if (!singlePose || !singlePose.stream) {
+                    btnSingleStartCam.style.display = 'inline-flex';
+                    btnSingleStartCam.disabled = false;
+                    btnSingleStartCam.textContent = 'Retry Camera';
+                }
+            }
+        });
+
+        try {
+            await singlePose.startCamera(videoEl, canvasEl);
+            btnSingleStartCam.style.display = 'none';
+
+            singleCalProgress.style.display = 'flex';
+            singleCamStatus.textContent = 'Calibrating...';
+            singleCamHint.textContent = 'Stand still — calibrating...';
+            singleCalFill.style.width = '0%';
+
+            let elapsed = 0;
+            const calInterval = setInterval(() => {
+                elapsed += 100;
+                const pct = Math.min((elapsed / 2000) * 100, 100);
+                singleCalFill.style.width = pct + '%';
+                singleCalText.textContent = Math.round(pct) + '%';
+                if (elapsed >= 2200) clearInterval(calInterval);
+            }, 100);
+
+            await singlePose.calibrate();
+        } catch (e) {
+            singleCamHint.textContent = 'Camera failed: ' + e.message;
+            btnSingleStartCam.style.display = 'inline-flex';
+            btnSingleStartCam.disabled = false;
+            btnSingleStartCam.textContent = 'Retry Camera';
+        }
+    }
+
+    // ── Single Player: postMessage listener for score ──
+    window.addEventListener('message', (event) => {
+        const data = event.data;
+        if (!data || !data.type) return;
+
+        // Single player iframe
+        const singleIframe = $('dino-iframe-single');
+        if (singleIframe && event.source === singleIframe.contentWindow) {
+            if (data.type === 'score-update') {
+                singleScore.textContent = data.score;
+            }
+            if (data.type === 'game-over') {
+                singleScore.textContent = data.score;
+                singleCamHint.textContent = 'Game Over! Score: ' + data.score + ' — Jump to restart!';
+                singleCamHint.classList.remove('success');
+            }
+            return;
+        }
+
+        // Multiplayer iframe (your game)
+        const youIframe = $('dino-iframe-you');
+        const isMyGame = event.source === (youIframe && youIframe.contentWindow);
+
+        if (isMyGame && data.type === 'score-update') {
+            myScore = data.score;
+            arenaYouScore.textContent = data.score;
+            if (isGamePlaying) {
+                socket.emit('score-update', { score: data.score });
+            }
+        }
+
+        if (isMyGame && data.type === 'game-over') {
+            myScore = data.score;
+            arenaYouScore.textContent = data.score;
+            arenaYouBadge.textContent = 'Crashed';
+            arenaYouBadge.classList.add('crashed');
+            if (isGamePlaying) {
+                socket.emit('player-died', { score: data.score });
+            }
+        }
+    });
+
+    // ══════════════ EVENT LISTENERS ══════════════
+
+    // ── Mode Selection ──
+    btnModeSingle.addEventListener('click', () => {
+        showScreen('single');
+    });
+
+    btnModeMulti.addEventListener('click', () => {
+        modeSelect.style.display = 'none';
+        multiForm.style.display = 'flex';
+    });
+
+    btnBackMode.addEventListener('click', () => {
+        multiForm.style.display = 'none';
+        modeSelect.style.display = 'block';
+    });
+
+    // ── Single Player buttons ──
+    btnSingleStartCam.addEventListener('click', () => {
+        initSingleCamera();
+    });
+
+    btnSingleRecalibrate.addEventListener('click', async () => {
+        if (!singlePose || !singlePose.running) return;
+        singleCamStatus.textContent = 'Recalibrating...';
+        singleCamHint.textContent = 'Stand still — recalibrating...';
+        singleCamHint.classList.remove('success');
+        singleCalProgress.style.display = 'flex';
+        singleCalFill.style.width = '0%';
+
+        let elapsed = 0;
+        const calInterval = setInterval(() => {
+            elapsed += 100;
+            const pct = Math.min((elapsed / 2000) * 100, 100);
+            singleCalFill.style.width = pct + '%';
+            singleCalText.textContent = Math.round(pct) + '%';
+            if (elapsed >= 2200) clearInterval(calInterval);
+        }, 100);
+
+        await singlePose.calibrate();
+    });
+
+    btnSingleBack.addEventListener('click', () => {
+        singlePlaying = false;
+        if (singlePose) { singlePose.stop(); singlePose = null; }
+        showScreen('landing');
+        // Reset single player UI
+        btnSingleStartCam.style.display = 'inline-flex';
+        btnSingleStartCam.disabled = false;
+        btnSingleStartCam.textContent = 'Start Camera';
+        btnSingleRecalibrate.style.display = 'none';
+        singleCalProgress.style.display = 'none';
+        singleCamHint.textContent = 'Start camera, calibrate, then jump to play!';
+        singleCamHint.classList.remove('success');
+        singleScore.textContent = '0';
+    });
+
+    // ── Multiplayer Lobby buttons ──
     btnStartCam.addEventListener('click', () => {
         initCamera();
     });

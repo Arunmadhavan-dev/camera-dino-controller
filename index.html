@@ -19,7 +19,26 @@
                 <h1>Dino Arena</h1>
                 <p class="tagline">Jump IRL to Win</p>
             </div>
-            <div class="glass-card landing-card">
+
+            <!-- Mode Selection -->
+            <div class="glass-card landing-card" id="mode-select">
+                <div class="mode-buttons">
+                    <button id="btn-mode-single" class="btn btn-mode">
+                        <span class="mode-icon">🎮</span>
+                        <span class="mode-label">Single Player</span>
+                        <span class="mode-desc">Play solo with your webcam</span>
+                    </button>
+                    <button id="btn-mode-multi" class="btn btn-mode">
+                        <span class="mode-icon">👥</span>
+                        <span class="mode-label">Multiplayer</span>
+                        <span class="mode-desc">Compete with a friend online</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Multiplayer Form (hidden by default) -->
+            <div class="glass-card landing-card" id="multi-form" style="display:none;">
+                <button id="btn-back-mode" class="btn btn-ghost btn-sm back-btn">← Back</button>
                 <input type="text" id="player-name" placeholder="Your name" maxlength="15" autocomplete="off">
                 <button id="btn-create" class="btn btn-primary btn-lg">Create Room</button>
                 <div class="divider"><span>or join a friend</span></div>
@@ -28,6 +47,40 @@
                     <button id="btn-join" class="btn btn-accent">Join</button>
                 </div>
                 <div id="landing-error" class="error-msg" style="display:none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════════════ SCREEN: SINGLE PLAYER ════════════════ -->
+    <div id="screen-single" class="screen">
+        <div class="single-wrap">
+            <!-- Top: Game -->
+            <div class="single-game-section">
+                <div class="single-header">
+                    <span class="arena-name">🦖 Single Player</span>
+                    <span class="arena-score">Score: <strong id="single-score">0</strong></span>
+                    <button id="btn-single-back" class="btn btn-ghost btn-sm">✕ Quit</button>
+                </div>
+                <iframe id="dino-iframe-single" class="dino-iframe" src="trex/index.html" frameborder="0" scrolling="no"></iframe>
+            </div>
+            <!-- Bottom: Camera -->
+            <div class="single-cam-section">
+                <div class="single-cam-wrap">
+                    <video id="single-webcam" autoplay playsinline muted></video>
+                    <canvas id="single-pose-canvas"></canvas>
+                    <div class="cam-overlay" id="single-cam-status">Camera off</div>
+                </div>
+                <div class="single-cam-controls" id="single-cam-controls">
+                    <button id="btn-single-start-cam" class="btn btn-accent">Start Camera</button>
+                    <button id="btn-single-recalibrate" class="btn btn-ghost btn-sm" style="display:none;">Recalibrate</button>
+                </div>
+                <div class="lobby-cam-progress" id="single-cal-progress" style="display:none;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="single-cal-fill"></div>
+                    </div>
+                    <span class="progress-text" id="single-cal-text">Calibrating...</span>
+                </div>
+                <div class="lobby-cam-hint" id="single-cam-hint">Start camera, calibrate, then jump to play!</div>
             </div>
         </div>
     </div>
