@@ -253,8 +253,10 @@ html, body {
 
 .lobby-wrap {
     width: 100%;
-    max-width: 520px;
+    max-width: 600px;
     padding: 20px;
+    max-height: 100vh;
+    overflow-y: auto;
 }
 
 .lobby-card {
@@ -372,8 +374,9 @@ html, body {
 .lobby-cam-wrap {
     position: relative;
     width: 100%;
-    max-width: 400px;
-    aspect-ratio: 4/3;
+    max-width: 480px;
+    aspect-ratio: 3/4;
+    max-height: 50vh;
     margin: 0 auto;
     border-radius: var(--radius-sm);
     overflow: hidden;
@@ -495,9 +498,11 @@ html, body {
 
 /* ═══════════ GAMEPLAY SCREEN ═══════════ */
 #screen-game {
-    min-height: 100vh;
-    padding: 12px;
+    height: 100vh;
+    max-height: 100vh;
+    padding: 10px;
     justify-content: flex-start;
+    overflow: hidden;
 }
 
 #screen-game.active {
@@ -507,20 +512,22 @@ html, body {
 .arena {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 16px;
+    gap: 12px;
     width: 100%;
     max-width: 1400px;
     margin: 0 auto;
+    height: calc(100vh - 24px);
 }
 
 .arena-side {
     background: var(--glass);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius);
-    padding: 14px;
+    padding: 10px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
+    overflow: hidden;
 }
 
 .arena-header {
@@ -566,8 +573,8 @@ html, body {
 .arena-cam-wrap {
     position: relative;
     width: 100%;
-    aspect-ratio: 16/9;
-    max-height: 160px;
+    flex: 1;
+    min-height: 200px;
     border-radius: var(--radius-sm);
     overflow: hidden;
     background: #000;
