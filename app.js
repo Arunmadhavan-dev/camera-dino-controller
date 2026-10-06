@@ -15,6 +15,7 @@
     let cameraReady = false;
     let isGamePlaying = false;
     let myScore = 0;
+    const SOCKET_SERVER_URL = 'https://dino-server-nu.vercel.app';
 
     // ── DOM refs ──
     const $ = id => document.getElementById(id);
@@ -128,10 +129,21 @@
 
     // ── Socket.io ──
     function connectSocket() {
-        socket = io();
+        if (typeof io !== 'function') {
+            showLandingError('Multiplayer client failed to load. Refresh and try again.');
+            return;
+        }
+
+        socket = io(SOCKET_SERVER_URL, {
+            transports: ['websocket', 'polling']
+        });
 
         socket.on('connect', () => {
             console.log('Connected:', socket.id);
+        });
+
+        socket.on('connect_error', () => {
+            showLandingError('Cannot connect to the multiplayer server. Try again shortly.');
         });
 
         socket.on('disconnect', () => {
@@ -768,6 +780,9 @@
     });
 
     btnCreate.addEventListener('click', () => {
+        if (!socket || !socket.connected) {
+            return showLandingError('Connecting to the multiplayer server. Try again shortly.');
+        }
         playerName = playerNameInput.value.trim() || 'Player';
         socket.emit('create-room', { name: playerName });
     });
@@ -775,6 +790,9 @@
     btnJoin.addEventListener('click', () => {
         const code = joinCodeInput.value.trim().toUpperCase();
         if (!code) return showLandingError('Enter a room code');
+        if (!socket || !socket.connected) {
+            return showLandingError('Connecting to the multiplayer server. Try again shortly.');
+        }
         playerName = playerNameInput.value.trim() || 'Player';
         socket.emit('join-room', { roomCode: code, name: playerName });
     });
@@ -793,6 +811,9 @@
     });
 
     btnReady.addEventListener('click', () => {
+        if (!socket || !socket.connected) {
+            return showLandingError('Multiplayer server disconnected. Try again shortly.');
+        }
         socket.emit('player-ready');
         btnReady.disabled = true;
         btnReady.textContent = 'Waiting...';
