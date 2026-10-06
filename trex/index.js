@@ -118,11 +118,11 @@
         MAX_CLOUDS: 6,
         MAX_OBSTACLE_LENGTH: 3,
         MAX_OBSTACLE_DUPLICATION: 2,
-        MAX_SPEED: 9,
+        MAX_SPEED: 4,
         MIN_JUMP_HEIGHT: 35,
         MOBILE_SPEED_COEFFICIENT: 1.2,
         RESOURCE_TEMPLATE_ID: 'audio-resources',
-        SPEED: 2.3,
+        SPEED: 2.5,
         SPEED_DROP_COEFFICIENT: 3,
         ARCADE_MODE_INITIAL_TOP_POSITION: 35,
         ARCADE_MODE_TOP_POSITION_PERCENT: 0.1
@@ -1579,10 +1579,10 @@
      */
     Trex.config = {
         DROP_VELOCITY: -5,
-        GRAVITY: 0.6,
+        GRAVITY: 0.35,
         HEIGHT: 47,
         HEIGHT_DUCK: 25,
-        INIITAL_JUMP_VELOCITY: -10,
+        INIITAL_JUMP_VELOCITY: -8,
         INTRO_DURATION: 1500,
         MAX_JUMP_HEIGHT: 30,
         MIN_JUMP_HEIGHT: 30,
