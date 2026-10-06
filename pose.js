@@ -1,4 +1,4 @@
-```javascript
+
 /**
  * PoseController – Webcam + MoveNet pose detection + jump detection
  */
@@ -382,4 +382,4 @@ class PoseController {
         }
     }
 }
-```
+
