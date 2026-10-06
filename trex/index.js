@@ -1,5 +1,5 @@
 // Copyright (c) 2014 The Chromium Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
+// Use of this source code is governed by a BSD-style license that can be 
 // found in the LICENSE file.
 // extract from chromium source code by @liuwayong
 (function () {
@@ -110,8 +110,8 @@
         CLOUD_FREQUENCY: 0.5,
         GAMEOVER_CLEAR_TIME: 750,
         GAP_COEFFICIENT: 0.6,
-        GRAVITY: 0.6,
-        INITIAL_JUMP_VELOCITY: 12,
+        GRAVITY: 0.5,
+        INITIAL_JUMP_VELOCITY: 14,
         INVERT_FADE_DURATION: 12000,
         INVERT_DISTANCE: 700,
         MAX_BLINK_COUNT: 3,
