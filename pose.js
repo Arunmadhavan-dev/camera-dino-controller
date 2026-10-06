@@ -1,12 +1,6 @@
 ```javascript
 /**
  * PoseController – Webcam + MoveNet pose detection + jump detection
- *
- * Jump behavior:
- * - Detects a jump from body movement.
- * - Fires SPACE keydown.
- * - Holds SPACE for ~180ms.
- * - Fires SPACE keyup.
  */
 class PoseController {
     constructor(options = {}) {
@@ -30,11 +24,10 @@ class PoseController {
         this.minVelocity = 2;
         this.lastJumpTime = 0;
 
-        // How long SPACE stays pressed
-        // 180ms is a good starting point.
+        // NEW: Hold jump key for this many milliseconds
         this.jumpKeyHoldTime = options.jumpKeyHoldTime || 180;
 
-        // Track whether SPACE is currently held
+        // NEW: Track jump key state/timer
         this.jumpKeyDown = false;
         this.jumpKeyUpTimer = null;
 
@@ -58,16 +51,10 @@ class PoseController {
 
         try {
             this.stream = await navigator.mediaDevices.getUserMedia({
-                video: {
-                    width: 640,
-                    height: 480,
-                    facingMode: 'user'
-                },
+                video: { width: 640, height: 480, facingMode: 'user' },
                 audio: false
             });
-
             this.video.srcObject = this.stream;
-
             await new Promise(resolve => {
                 this.video.onloadedmetadata = () => {
                     this.canvas.width = this.video.videoWidth;
@@ -75,7 +62,6 @@ class PoseController {
                     resolve();
                 };
             });
-
         } catch (err) {
             this.onError('Camera access denied: ' + err.message);
             throw err;
@@ -87,24 +73,18 @@ class PoseController {
             this.detector = await poseDetection.createDetector(
                 poseDetection.SupportedModels.MoveNet,
                 {
-                    modelType:
-                        poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
-
+                    modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
                     enableSmoothing: true,
-
                     minPoseScore: 0.3
                 }
             );
-
         } catch (err) {
             this.onError('Failed to load model: ' + err.message);
             throw err;
         }
 
         this.running = true;
-
         this.onStatus('Model loaded');
-
         this.detectLoop();
     }
 
@@ -112,83 +92,49 @@ class PoseController {
         this.isCalibrating = true;
         this.isCalibrated = false;
         this.calibrationSamples = [];
-
-        // Clear previous movement history
-        this.yHistory = [];
-
         this.onStatus('Stand still for calibration...');
 
         return new Promise((resolve) => {
-
             const duration = 2000;
             const interval = 100;
-
             let elapsed = 0;
 
             const timer = setInterval(async () => {
-
                 elapsed += interval;
 
                 try {
-
-                    const poses =
-                        await this.detector.estimatePoses(this.video);
+                    const poses = await this.detector.estimatePoses(this.video);
 
                     if (poses.length > 0) {
-
-                        const nose =
-                            poses[0].keypoints.find(
-                                k => k.name === 'nose'
-                            );
+                        const nose = poses[0].keypoints.find(k => k.name === 'nose');
 
                         if (nose && nose.score > 0.5) {
                             this.calibrationSamples.push(nose.y);
                         }
                     }
-
                 } catch (e) {
-                    // Skip bad frame
+                    /* skip frame */
                 }
 
                 if (elapsed >= duration) {
-
                     clearInterval(timer);
-
                     this.isCalibrating = false;
 
                     if (this.calibrationSamples.length >= 3) {
-
                         // Trimmed mean
-                        const sorted =
-                            [...this.calibrationSamples]
-                                .sort((a, b) => a - b);
-
-                        const trim =
-                            Math.max(
-                                1,
-                                Math.floor(sorted.length * 0.1)
-                            );
-
-                        const trimmed =
-                            sorted.slice(
-                                trim,
-                                sorted.length - trim
-                            );
+                        const sorted = [...this.calibrationSamples].sort((a, b) => a - b);
+                        const trim = Math.max(1, Math.floor(sorted.length * 0.1));
+                        const trimmed = sorted.slice(trim, sorted.length - trim);
 
                         this.baselineY =
-                            trimmed.reduce(
-                                (a, b) => a + b,
-                                0
-                            ) / trimmed.length;
+                            trimmed.reduce((a, b) => a + b, 0) /
+                            trimmed.length;
 
                         this.isCalibrated = true;
-
                         this.onStatus('Ready');
-
                         this.onCalibrated();
 
                     } else {
-
                         this.onStatus(
                             'Calibration failed (' +
                             this.calibrationSamples.length +
@@ -202,49 +148,34 @@ class PoseController {
 
                     resolve();
                 }
-
             }, interval);
         });
     }
 
     async detectLoop() {
-
         if (!this.running) return;
 
         try {
-
-            const poses =
-                await this.detector.estimatePoses(this.video);
+            const poses = await this.detector.estimatePoses(this.video);
 
             if (poses.length > 0) {
-
                 this.drawPose(poses[0]);
 
                 if (this.isCalibrated) {
                     this.analyzePose(poses[0]);
                 }
             }
-
         } catch (e) {
-            // Skip bad frame
+            /* skip */
         }
 
-        this.rafId =
-            requestAnimationFrame(
-                () => this.detectLoop()
-            );
+        this.rafId = requestAnimationFrame(() => this.detectLoop());
     }
 
     analyzePose(pose) {
+        const nose = pose.keypoints.find(k => k.name === 'nose');
 
-        const nose =
-            pose.keypoints.find(
-                k => k.name === 'nose'
-            );
-
-        if (!nose || nose.score < 0.5) {
-            return;
-        }
+        if (!nose || nose.score < 0.5) return;
 
         const now = Date.now();
 
@@ -257,78 +188,47 @@ class PoseController {
             this.yHistory.shift();
         }
 
-        if (this.yHistory.length < 2) {
-            return;
-        }
+        if (this.yHistory.length < 2) return;
 
-        const curr =
-            this.yHistory[
-                this.yHistory.length - 1
-            ];
+        const curr = this.yHistory[this.yHistory.length - 1];
+        const prev = this.yHistory[this.yHistory.length - 2];
 
-        const prev =
-            this.yHistory[
-                this.yHistory.length - 2
-            ];
+        const dt = (curr.t - prev.t) || 1;
 
-        const dt =
-            (curr.t - prev.t) || 1;
-
-        // Positive = moving down
-        // Negative = moving up
         const velocity =
             ((curr.y - prev.y) / dt) * 1000;
 
-        // How far above calibration position
-        // the nose currently is.
         const yDiff =
             this.baselineY - curr.y;
-
-        /*
-         * JUMP DETECTION
-         *
-         * Conditions:
-         *
-         * 1. Player is sufficiently above baseline.
-         * 2. Player is moving upward.
-         * 3. Previous jump cooldown has expired.
-         */
 
         if (
             yDiff > this.jumpThreshold &&
             velocity < -this.minVelocity &&
             (now - this.lastJumpTime) > this.jumpCooldown
         ) {
-
             this.lastJumpTime = now;
 
-            // Start the jump with a held SPACE key
+            // CHANGED:
+            // Instead of immediately calling onJump(),
+            // hold the jump key for 180ms.
             this.startJumpKey();
 
-            // Keep existing callback functionality
+            // Keep your original callback too.
             this.onJump();
         }
     }
 
-    /**
-     * Press SPACE and keep it held.
-     */
-    startJumpKey() {
+    // =========================================================
+    // NEW: START JUMP KEY
+    // =========================================================
 
-        // Don't trigger another keydown
-        // while SPACE is already being held.
-        if (this.jumpKeyDown) {
-            return;
-        }
+    startJumpKey() {
+        // Don't press the key again if it is already held
+        if (this.jumpKeyDown) return;
 
         this.jumpKeyDown = true;
 
-        /*
-         * KEYDOWN
-         *
-         * This tells the game:
-         * "The player has started pressing jump."
-         */
+        // KEY DOWN
         window.dispatchEvent(
             new KeyboardEvent('keydown', {
                 key: ' ',
@@ -339,42 +239,22 @@ class PoseController {
             })
         );
 
-        /*
-         * Release the key later.
-         *
-         * 180ms means:
-         *
-         * KEYDOWN
-         *    ↓
-         *    ↓ 180ms
-         *    ↓
-         * KEYUP
-         */
-        this.jumpKeyUpTimer =
-            setTimeout(() => {
-
-                this.endJumpKey();
-
-            }, this.jumpKeyHoldTime);
+        // Release after 180ms
+        this.jumpKeyUpTimer = setTimeout(() => {
+            this.endJumpKey();
+        }, this.jumpKeyHoldTime);
     }
 
-    /**
-     * Release SPACE after the hold duration.
-     */
-    endJumpKey() {
+    // =========================================================
+    // NEW: END JUMP KEY
+    // =========================================================
 
-        if (!this.jumpKeyDown) {
-            return;
-        }
+    endJumpKey() {
+        if (!this.jumpKeyDown) return;
 
         this.jumpKeyDown = false;
 
-        /*
-         * KEYUP
-         *
-         * The game now knows that
-         * the jump button has been released.
-         */
+        // KEY UP
         window.dispatchEvent(
             new KeyboardEvent('keyup', {
                 key: ' ',
@@ -389,7 +269,6 @@ class PoseController {
     }
 
     drawPose(pose) {
-
         const ctx = this.ctx;
 
         ctx.clearRect(
@@ -401,10 +280,7 @@ class PoseController {
 
         // Draw keypoints
         for (const kp of pose.keypoints) {
-
-            if (kp.score < 0.3) {
-                continue;
-            }
+            if (kp.score < 0.3) continue;
 
             ctx.beginPath();
 
@@ -424,25 +300,18 @@ class PoseController {
             ctx.fill();
         }
 
-        // Skeleton connections
+        // Draw skeleton
         const connections = [
-
             ['left_shoulder', 'right_shoulder'],
-
             ['left_shoulder', 'left_elbow'],
             ['left_elbow', 'left_wrist'],
-
             ['right_shoulder', 'right_elbow'],
             ['right_elbow', 'right_wrist'],
-
             ['left_shoulder', 'left_hip'],
             ['right_shoulder', 'right_hip'],
-
             ['left_hip', 'right_hip'],
-
             ['left_hip', 'left_knee'],
             ['left_knee', 'left_ankle'],
-
             ['right_hip', 'right_knee'],
             ['right_knee', 'right_ankle']
         ];
@@ -459,7 +328,6 @@ class PoseController {
         ctx.lineWidth = 2;
 
         for (const [a, b] of connections) {
-
             const ka = kpMap[a];
             const kb = kpMap[b];
 
@@ -469,22 +337,49 @@ class PoseController {
                 ka.score > 0.3 &&
                 kb.score > 0.3
             ) {
-
                 ctx.beginPath();
-
-                ctx.moveTo(
-                    ka.x,
-                    ka.y
-                );
-
-                ctx.lineTo(
-                    kb.x,
-                    kb.y
-                );
-
+                ctx.moveTo(ka.x, ka.y);
+                ctx.lineTo(kb.x, kb.y);
                 ctx.stroke();
             }
         }
     }
 
-   
+    stop() {
+        this.running = false;
+
+        if (this.rafId) {
+            cancelAnimationFrame(this.rafId);
+            this.rafId = null;
+        }
+
+        // NEW:
+        // Cancel pending key release timer
+        if (this.jumpKeyUpTimer) {
+            clearTimeout(this.jumpKeyUpTimer);
+            this.jumpKeyUpTimer = null;
+        }
+
+        // NEW:
+        // Make sure SPACE is released before stopping
+        if (this.jumpKeyDown) {
+            this.endJumpKey();
+        }
+
+        if (this.stream) {
+            this.stream.getTracks().forEach(t => t.stop());
+            this.stream = null;
+        }
+    }
+
+    updateSettings(jumpThreshold, jumpCooldown) {
+        if (jumpThreshold !== undefined) {
+            this.jumpThreshold = jumpThreshold;
+        }
+
+        if (jumpCooldown !== undefined) {
+            this.jumpCooldown = jumpCooldown;
+        }
+    }
+}
+```
