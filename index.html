@@ -61,7 +61,10 @@
                     <span class="arena-score">Score: <strong id="single-score">0</strong></span>
                     <button id="btn-single-back" class="btn btn-ghost btn-sm">✕ Quit</button>
                 </div>
-                <iframe id="dino-iframe-single" class="dino-iframe" src="trex/index.html" frameborder="0" scrolling="no"></iframe>
+                <div class="single-iframe-wrap">
+                    <iframe id="dino-iframe-single" class="dino-iframe" src="trex/index.html" frameborder="0" scrolling="no"></iframe>
+                    <div id="single-test-badge" class="test-badge" style="display:none;">TEST MODE — score doesn't count</div>
+                </div>
             </div>
             <!-- Bottom: Camera -->
             <div class="single-cam-section">
@@ -72,6 +75,7 @@
                 </div>
                 <div class="single-cam-controls" id="single-cam-controls">
                     <button id="btn-single-start-cam" class="btn btn-accent">Start Camera</button>
+                    <button id="btn-single-start-game" class="btn btn-primary" style="display:none;">Start Game</button>
                     <button id="btn-single-recalibrate" class="btn btn-ghost btn-sm" style="display:none;">Recalibrate</button>
                 </div>
                 <div class="lobby-cam-progress" id="single-cal-progress" style="display:none;">
@@ -80,7 +84,7 @@
                     </div>
                     <span class="progress-text" id="single-cal-text">Calibrating...</span>
                 </div>
-                <div class="lobby-cam-hint" id="single-cam-hint">Start camera, calibrate, then jump to play!</div>
+                <div class="lobby-cam-hint" id="single-cam-hint">Start camera, calibrate, do a test jump, then Start Game!</div>
             </div>
         </div>
     </div>
@@ -206,6 +210,22 @@
             </div>
         </div>
         <canvas id="confetti-canvas"></canvas>
+    </div>
+
+    <!-- ════════════════ SCORE ENTRY OVERLAY ════════════════ -->
+    <div id="score-modal" class="score-modal">
+        <div class="glass-card score-card">
+            <div class="results-icon">🏆</div>
+            <h2>Game Over</h2>
+            <p>Your score: <strong id="score-display">0</strong></p>
+            <input type="text" id="score-name" placeholder="Enter your name" maxlength="15" autocomplete="off">
+            <ul id="high-scores" class="high-scores"></ul>
+            <div class="score-actions">
+                <button id="btn-save-score" class="btn btn-primary">Save Score</button>
+                <button id="btn-skip-score" class="btn btn-ghost">Skip</button>
+                <button id="btn-exit-score" class="btn btn-ghost">Exit</button>
+            </div>
+        </div>
     </div>
 
     <!-- ════════════════ SCRIPTS ════════════════ -->
