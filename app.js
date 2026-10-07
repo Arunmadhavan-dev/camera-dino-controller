@@ -15,6 +15,7 @@
     let cameraReady = false;
     let isGamePlaying = false;
     let myScore = 0;
+    let scoreEntryMode = 'multi';
     const SOCKET_SERVER_URL = 'https://dino-server-nu.vercel.app';
 
     // ── DOM refs ──
@@ -22,6 +23,7 @@
 
     let singlePose = null; // separate pose controller for single player
     let singlePlaying = false;
+    let awaitingTestJump = false;
 
     const screens = {
         landing: $('screen-landing'),
@@ -50,12 +52,14 @@
     const singleScore = $('single-score');
     const btnSingleBack = $('btn-single-back');
     const btnSingleStartCam = $('btn-single-start-cam');
+    const btnSingleStartGame = $('btn-single-start-game');
     const btnSingleRecalibrate = $('btn-single-recalibrate');
     const singleCamStatus = $('single-cam-status');
     const singleCalProgress = $('single-cal-progress');
     const singleCalFill = $('single-cal-fill');
     const singleCalText = $('single-cal-text');
     const singleCamHint = $('single-cam-hint');
+    const singleTestBadge = $('single-test-badge');
 
     // Lobby
     const lobbyCode = $('lobby-code');
@@ -107,6 +111,15 @@
     const btnRematch = $('btn-rematch');
     const btnNewRoom = $('btn-new-room');
     const confettiCanvas = $('confetti-canvas');
+
+    // Score entry
+    const scoreModal = $('score-modal');
+    const scoreDisplay = $('score-display');
+    const scoreNameInput = $('score-name');
+    const highScoresList = $('high-scores');
+    const btnSaveScore = $('btn-save-score');
+    const btnSkipScore = $('btn-skip-score');
+    const btnExitScore = $('btn-exit-score');
 
     // ── Screen Management ──
     function showScreen(name) {
@@ -475,6 +488,64 @@
         }
 
         showScreen('results');
+        const myScoreValue = me ? me.score : myScore;
+        setTimeout(() => showScoreEntry(myScoreValue, 'multi'), 800);
+    }
+
+    // ── Score Entry / High Score Storage ──
+    function loadScores() {
+        try {
+            return JSON.parse(localStorage.getItem('dinoHighScores') || '[]');
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function saveScore(name, score) {
+        const trimmed = name.trim() || 'Player';
+        localStorage.setItem('dinoLastPlayerName', trimmed);
+        const scores = loadScores();
+        scores.push({ name: trimmed, score, date: new Date().toISOString() });
+        scores.sort((a, b) => b.score - a.score);
+        localStorage.setItem('dinoHighScores', JSON.stringify(scores));
+        renderHighScores(scores);
+    }
+
+    function renderHighScores(scores) {
+        highScoresList.innerHTML = scores.slice(0, 10).map((s, i) =>
+            `<li>${i + 1}. ${s.name} <span>${s.score}</span></li>`
+        ).join('');
+    }
+
+    function showScoreEntry(score, mode = 'multi') {
+        scoreEntryMode = mode;
+        scoreDisplay.textContent = score;
+        scoreNameInput.value =
+            localStorage.getItem('dinoLastPlayerName') || playerName || 'Player';
+        if (mode === 'single') {
+            // Keep it unready until the next player recalibrates
+            awaitingTestJump = false;
+            if (singlePose) singlePose.isCalibrated = false;
+            singleCamStatus.textContent = 'Waiting';
+            btnSingleStartGame.style.display = 'none';
+            singleTestBadge.style.display = 'none';
+            btnSaveScore.textContent = 'Save & Next Player';
+            btnSkipScore.style.display = 'none';
+            btnExitScore.style.display = 'none';
+        } else {
+            btnSaveScore.textContent = 'Save Score';
+            btnSkipScore.textContent = 'Skip';
+            btnSkipScore.style.display = 'inline-flex';
+            btnExitScore.style.display = 'inline-flex';
+        }
+        renderHighScores(loadScores());
+        scoreModal.classList.add('active');
+        scoreNameInput.focus();
+        scoreNameInput.select();
+    }
+
+    function hideScoreEntry() {
+        scoreModal.classList.remove('active');
     }
 
     // ── Confetti ──
@@ -568,6 +639,68 @@
 
     // ══════════════ SINGLE PLAYER LOGIC ══════════════
 
+    // ── Start the Single Player T-Rex game ──
+    function startSingleGame() {
+        singlePlaying = true;
+        awaitingTestJump = false;
+        btnSingleStartGame.style.display = 'none';
+        singleTestBadge.style.display = 'none';
+        singleScore.textContent = '0';
+        singleCamHint.textContent = 'Game running — jump to dodge!';
+        singleCamHint.classList.add('success');
+        singleCamStatus.textContent = 'Playing';
+
+        reloadIframe('dino-iframe-single');
+        setTimeout(() => {
+            sendKeyToIframe('dino-iframe-single', 'keydown', 32);
+            setTimeout(() => sendKeyToIframe('dino-iframe-single', 'keyup', 32), 100);
+        }, 800);
+    }
+
+    // ── Next player waiting state (manual calibrate) ──
+    function goToNextPlayerState() {
+        awaitingTestJump = false;
+        singlePlaying = false;
+        if (singlePose) singlePose.isCalibrated = false;
+        btnSingleStartGame.style.display = 'none';
+        singleTestBadge.style.display = 'none';
+        singleCalProgress.style.display = 'none';
+        reloadIframe('dino-iframe-single');
+        singleCamStatus.textContent = 'Waiting';
+        btnSingleRecalibrate.style.display = 'inline-flex';
+        btnSingleRecalibrate.textContent = 'Calibrate';
+        singleCamHint.textContent = 'Next player — click Calibrate, do a test jump, then Start Game.';
+        singleCamHint.classList.remove('success');
+    }
+
+    // ── Recalibrate for the current/next player ──
+    async function runSingleCalibration(isNextPlayer = false) {
+        if (!singlePose || !singlePose.running) return;
+        awaitingTestJump = false;
+        singlePlaying = false;
+        btnSingleStartGame.style.display = 'none';
+        singleTestBadge.style.display = 'none';
+        reloadIframe('dino-iframe-single');
+        singleCamStatus.textContent = 'Recalibrating...';
+        singleCamHint.textContent = isNextPlayer
+            ? 'New player — stand still, calibrating...'
+            : 'Stand still — recalibrating...';
+        singleCamHint.classList.remove('success');
+        singleCalProgress.style.display = 'flex';
+        singleCalFill.style.width = '0%';
+
+        let elapsed = 0;
+        const calInterval = setInterval(() => {
+            elapsed += 100;
+            const pct = Math.min((elapsed / 2000) * 100, 100);
+            singleCalFill.style.width = pct + '%';
+            singleCalText.textContent = Math.round(pct) + '%';
+            if (elapsed >= 2200) clearInterval(calInterval);
+        }, 100);
+
+        await singlePose.calibrate();
+    }
+
     // ── Single Player: Start Camera ──
     async function initSingleCamera() {
         if (singlePose && singlePose.running) return;
@@ -584,13 +717,30 @@
             jumpThreshold: parseInt(sensitivitySlider.value),
             jumpCooldown: parseInt(cooldownSlider.value),
             onJump: () => {
+                // Not playing: test mode — every jump makes the dino jump
+                if (!singlePlaying) {
+                    sendKeyToIframe('dino-iframe-single', 'keydown', 32);
+                    setTimeout(() => sendKeyToIframe('dino-iframe-single', 'keyup', 32), 100);
+                    singleCamStatus.textContent = 'JUMP!';
+                    setTimeout(() => {
+                        singleCamStatus.textContent = awaitingTestJump ? 'Calibrated ✓' : 'Ready';
+                    }, 300);
+                    if (awaitingTestJump) {
+                        awaitingTestJump = false;
+                        singleCamStatus.textContent = 'Jump detected ✓';
+                        btnSingleStartGame.textContent = 'Start Game';
+                        btnSingleStartGame.style.display = 'inline-flex';
+                        singleCamHint.textContent = 'Tracking works! Jump to test more, or click Start Game to play.';
+                    }
+                    return;
+                }
                 // Send Space key into single player iframe
                 sendKeyToIframe('dino-iframe-single', 'keydown', 32);
                 setTimeout(() => sendKeyToIframe('dino-iframe-single', 'keyup', 32), 100);
                 singleCamStatus.textContent = 'JUMP!';
                 singleCamStatus.style.color = 'var(--accent)';
                 setTimeout(() => {
-                    singleCamStatus.textContent = 'Ready';
+                    singleCamStatus.textContent = 'Playing';
                     singleCamStatus.style.color = '';
                 }, 300);
             },
@@ -601,16 +751,11 @@
                 singleCamStatus.textContent = 'Calibrated ✓';
                 singleCalProgress.style.display = 'none';
                 btnSingleRecalibrate.style.display = 'inline-flex';
-                singleCamHint.textContent = 'Calibrated! Jump to play the Dino game!';
+                btnSingleStartGame.style.display = 'none';
+                awaitingTestJump = true;
+                singleTestBadge.style.display = 'block';
+                singleCamHint.textContent = 'Calibrated! Do a test jump — the dino will jump, score won\'t count.';
                 singleCamHint.classList.add('success');
-                singlePlaying = true;
-
-                // Auto-start the game
-                reloadIframe('dino-iframe-single');
-                setTimeout(() => {
-                    sendKeyToIframe('dino-iframe-single', 'keydown', 32);
-                    setTimeout(() => sendKeyToIframe('dino-iframe-single', 'keyup', 32), 100);
-                }, 800);
             },
             onError: (msg) => {
                 singleCamStatus.textContent = 'Error';
@@ -660,13 +805,22 @@
         // Single player iframe
         const singleIframe = $('dino-iframe-single');
         if (singleIframe && event.source === singleIframe.contentWindow) {
+            if (!singlePlaying) return; // ignore messages from the test-jump run
             if (data.type === 'score-update') {
                 singleScore.textContent = data.score;
             }
             if (data.type === 'game-over') {
                 singleScore.textContent = data.score;
-                singleCamHint.textContent = 'Game Over! Score: ' + data.score + ' — Jump to restart!';
+                singleCamHint.textContent = 'Game Over! Score: ' + data.score;
                 singleCamHint.classList.remove('success');
+                singlePlaying = false;
+                awaitingTestJump = false;
+                // Invalidate the old calibration — next player must recalibrate before jumps work
+                if (singlePose) singlePose.isCalibrated = false;
+                singleCamStatus.textContent = 'Waiting';
+                singleTestBadge.style.display = 'none';
+                btnSingleStartGame.style.display = 'none';
+                setTimeout(() => showScoreEntry(data.score, 'single'), 400);
             }
             return;
         }
@@ -716,28 +870,17 @@
         initSingleCamera();
     });
 
-    btnSingleRecalibrate.addEventListener('click', async () => {
-        if (!singlePose || !singlePose.running) return;
-        singleCamStatus.textContent = 'Recalibrating...';
-        singleCamHint.textContent = 'Stand still — recalibrating...';
-        singleCamHint.classList.remove('success');
-        singleCalProgress.style.display = 'flex';
-        singleCalFill.style.width = '0%';
-
-        let elapsed = 0;
-        const calInterval = setInterval(() => {
-            elapsed += 100;
-            const pct = Math.min((elapsed / 2000) * 100, 100);
-            singleCalFill.style.width = pct + '%';
-            singleCalText.textContent = Math.round(pct) + '%';
-            if (elapsed >= 2200) clearInterval(calInterval);
-        }, 100);
-
-        await singlePose.calibrate();
+    btnSingleStartGame.addEventListener('click', () => {
+        startSingleGame();
     });
 
-    btnSingleBack.addEventListener('click', () => {
+    btnSingleRecalibrate.addEventListener('click', () => {
+        runSingleCalibration();
+    });
+
+    function resetSingleScreen() {
         singlePlaying = false;
+        awaitingTestJump = false;
         if (singlePose) { singlePose.stop(); singlePose = null; }
         showScreen('landing');
         // Reset single player UI
@@ -745,10 +888,17 @@
         btnSingleStartCam.disabled = false;
         btnSingleStartCam.textContent = 'Start Camera';
         btnSingleRecalibrate.style.display = 'none';
+        btnSingleStartGame.style.display = 'none';
+        singleTestBadge.style.display = 'none';
         singleCalProgress.style.display = 'none';
-        singleCamHint.textContent = 'Start camera, calibrate, then jump to play!';
+        singleCamStatus.textContent = 'Camera off';
+        singleCamHint.textContent = 'Start camera, calibrate, do a test jump, then Start Game!';
         singleCamHint.classList.remove('success');
         singleScore.textContent = '0';
+    }
+
+    btnSingleBack.addEventListener('click', () => {
+        resetSingleScreen();
     });
 
     // ── Multiplayer Lobby buttons ──
@@ -829,6 +979,29 @@
 
     btnNewRoom.addEventListener('click', () => {
         resetFull();
+    });
+
+    // Score entry
+    btnSaveScore.addEventListener('click', () => {
+        const name = scoreNameInput.value;
+        const score = parseInt(scoreDisplay.textContent, 10) || 0;
+        saveScore(name, score);
+        hideScoreEntry();
+        if (scoreEntryMode === 'single') goToNextPlayerState();
+    });
+
+    btnSkipScore.addEventListener('click', () => {
+        hideScoreEntry();
+        if (scoreEntryMode === 'single') runSingleCalibration(true);
+    });
+
+    btnExitScore.addEventListener('click', () => {
+        hideScoreEntry();
+        if (scoreEntryMode === 'single') resetSingleScreen();
+    });
+
+    scoreNameInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') btnSaveScore.click();
     });
 
     // Settings toggle
