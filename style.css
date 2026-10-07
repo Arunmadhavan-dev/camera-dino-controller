@@ -936,3 +936,110 @@ html, body {
 }
 
 .shake { animation: shake 0.3s ease; }
+
+/* ═══════════ SCORE ENTRY OVERLAY ═══════════ */
+.score-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.7);
+    padding: 20px;
+}
+
+.score-modal.active {
+    display: flex;
+}
+
+.score-card {
+    width: 100%;
+    max-width: 360px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.score-card h2 {
+    font-size: 1.6rem;
+    font-weight: 800;
+}
+
+.score-card p {
+    color: var(--text-dim);
+    font-size: 1rem;
+}
+
+.score-card p strong {
+    color: var(--text);
+    font-size: 2rem;
+    font-weight: 900;
+    font-family: 'Courier New', monospace;
+}
+
+.score-card input[type="text"] {
+    width: 100%;
+    padding: 12px 16px;
+    background: var(--surface);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 1rem;
+    outline: none;
+    text-align: center;
+}
+
+.score-card input[type="text"]:focus {
+    border-color: var(--accent);
+}
+
+.high-scores {
+    list-style: none;
+    text-align: left;
+    font-size: 0.9rem;
+    color: var(--text-dim);
+    max-height: 140px;
+    overflow-y: auto;
+}
+
+.high-scores li {
+    padding: 6px 0;
+    border-bottom: 1px solid var(--glass-border);
+    display: flex;
+    justify-content: space-between;
+}
+
+.high-scores li span {
+    color: var(--text);
+    font-weight: 700;
+}
+
+.score-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+/* ═══════════ TEST MODE BADGE ═══════════ */
+.single-iframe-wrap {
+    position: relative;
+}
+
+.test-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 5;
+    padding: 6px 14px;
+    background: rgba(251,191,36,0.95);
+    color: #000;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+    border-radius: var(--radius-sm);
+    text-transform: uppercase;
+    pointer-events: none;
+}
